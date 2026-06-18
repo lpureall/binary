@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이진수 만들기 게임</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&display=swap');
+
+  :root{
+    --bg:#F7F5FF;
+    --card-bg:#FFFFFF;
+    --ink:#2D2A4A;
+    --muted:#6B6790;
+    --accent:#6C5CE7;
+    --accent-dark:#4B3FC0;
+    --on-color:#FFC857;
+    --on-ink:#7A4B00;
+    --on-glow:rgba(255,200,87,0.55);
+    --off-color:#E4E1F5;
+    --off-ink:#6B6790;
+    --success:#3FAE7B;
+    --warn:#FF6F59;
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--bg);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+    padding:32px 16px;
+  }
+
+  .wrap{width:100%; max-width:640px;}
+
+  h1{
+    font-family:'Baloo 2',system-ui,sans-serif;
+    font-size:clamp(28px,5vw,40px);
+    text-align:center;
+    margin:0 0 6px;
+    color:var(--accent-dark);
+  }
+
+  .sub{text-align:center; color:var(--muted); margin:0 0 28px; font-size:16px;}
+
+  .card{
+    background:var(--card-bg);
+    border-radius:24px;
+    padding:28px 24px;
+    box-shadow:0 12px 32px rgba(108,92,231,0.12);
+  }
+
+  .diff-toggle{display:flex; gap:10px; margin-bottom:20px;}
+
+  .pill{
+    flex:1;
+    border:2px solid var(--accent);
+    background:#fff;
+    color:var(--accent-dark);
+    font-weight:700;
+    font-size:15px;
+    padding:10px 0;
+    border-radius:999px;
+    cursor:pointer;
+    transition:.15s;
+  }
+  .pill.active{background:var(--accent); color:#fff;}
+  .pill:hover{transform:translateY(-1px);}
+
+  .stats-row{display:flex; gap:12px; margin-bottom:24px;}
+  .stat-chip{flex:1; background:var(--bg); border-radius:14px; padding:12px 16px; text-align:center;}
+  .stat-label{display:block; font-size:12px; color:var(--muted); margin-bottom:4px;}
+  .stat-value{font-family:'Baloo 2',sans-serif; font-size:26px; color:var(--accent-dark); font-weight:700;}
+
+  .game-grids{display:flex; align-items:flex-start; gap:20px; flex-wrap:wrap; justify-content:center; margin-bottom:8px;}
+  .column{flex:1; min-width:220px;}
+  .divider{width:2px; background:var(--off-color); align-self:stretch; border-radius:2px;}
+  @media (max-width:520px){.divider{display:none;}}
+
+  .col-title{font-family:'Baloo 2',sans-serif; font-size:18px; margin:0 0 12px; text-align:center;}
+  .bits-grid{display:grid; gap:10px;}
+  .col-value{text-align:center; color:var(--muted); font-size:14px; margin:14px 0 0;}
+  .col-value strong{color:var(--ink); font-size:16px;}
+
+  .place-label{font-size:12px; color:var(--muted); text-align:center;}
+
+  .bulb{
+    aspect-ratio:1;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    font-size:18px;
+    transition:.2s;
+    border:none;
+    width:100%;
+  }
+  .bulb.off{background:var(--off-color); color:var(--off-ink); box-shadow:inset 0 2px 5px rgba(0,0,0,0.06);}
+  .bulb.on{background:var(--on-color); color:var(--on-ink); box-shadow:0 0 16px var(--on-glow), inset 0 -2px 6px rgba(255,255,255,0.5);}
+  .bulb.clickable{cursor:pointer;}
+  .bulb.clickable:active{transform:scale(0.94);}
+  .bulb.flash-correct{box-shadow:0 0 0 4px var(--success) !important;}
+  .bulb.flash-wrong{box-shadow:0 0 0 4px var(--warn) !important;}
+
+  .feedback{min-height:24px; text-align:center; font-weight:700; font-size:15px; margin:18px 0 4px;}
+  .feedback.success{color:var(--success);}
+  .feedback.warn{color:var(--warn);}
+
+  .action-row{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;}
+  .btn{
+    flex:1;
+    min-width:120px;
+    padding:13px 0;
+    border-radius:999px;
+    border:2px solid var(--accent);
+    background:#fff;
+    color:var(--accent-dark);
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+    transition:.15s;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn.primary{background:var(--accent); color:#fff;}
+
+  button:focus-visible{outline:3px solid var(--accent-dark); outline-offset:2px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important; animation:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>이진수 만들기 게임</h1>
+  <p class="sub">오른쪽 목표와 똑같이 왼쪽 전구를 눌러보세요!</p>
+
+  <div class="card">
+    <div class="diff-toggle">
+      <button id="diff4" class="pill active" type="button">4비트</button>
+      <button id="diff8" class="pill" type="button">8비트</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-chip">
+        <span class="stat-label">맞춘 문제</span>
+        <span class="stat-value" id="score">0</span>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-label">시도 횟수</span>
+        <span class="stat-value" id="tries">0</span>
+      </div>
+    </div>
+
+    <div class="game-grids">
+      <div class="column">
+        <p class="col-title">목표</p>
+        <div id="targetGrid" class="bits-grid" role="img"></div>
+        <p class="col-value">10진수: <strong id="targetVal">0</strong></p>
+      </div>
+      <div class="divider" aria-hidden="true"></div>
+      <div class="column">
+        <p class="col-title">내가 만들기</p>
+        <div id="playerGrid" class="bits-grid" role="group" aria-label="내가 만든 이진수"></div>
+        <p class="col-value">10진수: <strong id="playerVal">0</strong></p>
+      </div>
+    </div>
+
+    <p id="feedback" class="feedback" aria-live="polite"></p>
+
+    <div class="action-row">
+      <button id="checkBtn" class="btn primary" type="button">확인하기</button>
+      <button id="clearBtn" class="btn" type="button">다시 만들기</button>
+      <button id="nextBtn" class="btn" type="button">다음 문제</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var bits = 4;
+  var target = [];
+  var player = [];
+  var score = 0;
+  var tries = 0;
+  var autoNextTimer = null;
+
+  var diff4 = document.getElementById('diff4');
+  var diff8 = document.getElementById('diff8');
+  var scoreEl = document.getElementById('score');
+  var triesEl = document.getElementById('tries');
+  var playerGrid = document.getElementById('playerGrid');
+  var targetGrid = document.getElementById('targetGrid');
+  var playerVal = document.getElementById('playerVal');
+  var targetVal = document.getElementById('targetVal');
+  var feedback = document.getElementById('feedback');
+  var checkBtn = document.getElementById('checkBtn');
+  var clearBtn = document.getElementById('clearBtn');
+  var nextBtn = document.getElementById('nextBtn');
+
+  function placeValue(idx){ return Math.pow(2, bits - 1 - idx); }
+
+  function randomTarget(){
+    var max = Math.pow(2, bits) - 1;
+    return Math.floor(Math.random() * (max + 1));
+  }
+
+  function toBits(val){
+    var arr = [];
+    for(var i = bits - 1; i >= 0; i--){ arr.push((val >> i) & 1); }
+    return arr;
+  }
+
+  function toDecimal(arr){
+    var sum = 0;
+    for(var i = 0; i < arr.length; i++){ sum += arr[i] * placeValue(i); }
+    return sum;
+  }
+
+  function setActiveDiff(){
+    diff4.classList.toggle('active', bits === 4);
+    diff8.classList.toggle('active', bits === 8);
+  }
+
+  function onBitClick(e){
+    var idx = parseInt(e.currentTarget.dataset.idx, 10);
+    player[idx] = player[idx] === 1 ? 0 : 1;
+    var btn = e.currentTarget;
+    btn.textContent = player[idx];
+    btn.classList.toggle('on', player[idx] === 1);
+    btn.classList.toggle('off', player[idx] === 0);
+    btn.setAttribute('aria-pressed', player[idx] === 1 ? 'true' : 'false');
+    btn.setAttribute('aria-label', '자리값 ' + placeValue(idx) + ', 현재 값 ' + player[idx]);
+    playerVal.textContent = toDecimal(player);
+    feedback.textContent = '';
+    feedback.className = 'feedback';
+  }
+
+  function renderGrids(){
+    playerGrid.style.gridTemplateColumns = 'repeat(' + bits + ',1fr)';
+    targetGrid.style.gridTemplateColumns = 'repeat(' + bits + ',1fr)';
+    playerGrid.innerHTML = '';
+    targetGrid.innerHTML = '';
+
+    for(var i = 0; i < bits; i++){
+      var lbl = document.createElement('div');
+      lbl.className = 'place-label';
+      lbl.textContent = placeValue(i);
+      lbl.setAttribute('aria-hidden', 'true');
+      playerGrid.appendChild(lbl);
+    }
+    for(var j = 0; j < bits; j++){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'bulb clickable ' + (player[j] === 1 ? 'on' : 'off');
+      btn.textContent = player[j];
+      btn.dataset.idx = j;
+      btn.setAttribute('aria-pressed', player[j] === 1 ? 'true' : 'false');
+      btn.setAttribute('aria-label', '자리값 ' + placeValue(j) + ', 현재 값 ' + player[j]);
+      btn.addEventListener('click', onBitClick);
+      playerGrid.appendChild(btn);
+    }
+
+    for(var k = 0; k < bits; k++){
+      var lbl2 = document.createElement('div');
+      lbl2.className = 'place-label';
+      lbl2.textContent = placeValue(k);
+      lbl2.setAttribute('aria-hidden', 'true');
+      targetGrid.appendChild(lbl2);
+    }
+    for(var m = 0; m < bits; m++){
+      var cell = document.createElement('div');
+      cell.className = 'bulb ' + (target[m] === 1 ? 'on' : 'off');
+      cell.textContent = target[m];
+      cell.setAttribute('aria-hidden', 'true');
+      targetGrid.appendChild(cell);
+    }
+
+    targetGrid.setAttribute('aria-label', '목표 이진수: ' + target.join(' '));
+    playerVal.textContent = toDecimal(player);
+    targetVal.textContent = toDecimal(target);
+  }
+
+  function newRound(){
+    target = toBits(randomTarget());
+    player = new Array(bits).fill(0);
+    feedback.textContent = '';
+    feedback.className = 'feedback';
+    renderGrids();
+  }
+
+  function checkAnswer(){
+    if(autoNextTimer){ clearTimeout(autoNextTimer); autoNextTimer = null; }
+    tries++; triesEl.textContent = tries;
+    var match = true;
+    for(var i = 0; i < bits; i++){
+      if(player[i] !== target[i]){ match = false; }
+    }
+    var playerCells = playerGrid.querySelectorAll('button');
+    playerCells.forEach(function(cell){
+      var idx = parseInt(cell.dataset.idx, 10);
+      cell.classList.remove('flash-correct', 'flash-wrong');
+      if(player[idx] === target[idx]){
+        cell.classList.add('flash-correct');
+      } else {
+        cell.classList.add('flash-wrong');
+      }
+    });
+    setTimeout(function(){
+      playerCells.forEach(function(cell){ cell.classList.remove('flash-correct', 'flash-wrong'); });
+    }, 900);
+
+    if(match){
+      score++; scoreEl.textContent = score;
+      feedback.textContent = '정답이에요! 잘했어요.';
+      feedback.className = 'feedback success';
+      autoNextTimer = setTimeout(newRound, 1100);
+    } else {
+      feedback.textContent = '아직 같지 않아요. 빨간 전구를 다시 확인해보세요.';
+      feedback.className = 'feedback warn';
+    }
+  }
+
+  diff4.addEventListener('click', function(){
+    if(autoNextTimer){ clearTimeout(autoNextTimer); autoNextTimer = null; }
+    bits = 4; score = 0; tries = 0;
+    scoreEl.textContent = 0; triesEl.textContent = 0;
+    setActiveDiff(); newRound();
+  });
+  diff8.addEventListener('click', function(){
+    if(autoNextTimer){ clearTimeout(autoNextTimer); autoNextTimer = null; }
+    bits = 8; score = 0; tries = 0;
+    scoreEl.textContent = 0; triesEl.textContent = 0;
+    setActiveDiff(); newRound();
+  });
+  checkBtn.addEventListener('click', checkAnswer);
+  clearBtn.addEventListener('click', function(){
+    player = new Array(bits).fill(0);
+    feedback.textContent = '';
+    feedback.className = 'feedback';
+    renderGrids();
+  });
+  nextBtn.addEventListener('click', function(){
+    if(autoNextTimer){ clearTimeout(autoNextTimer); autoNextTimer = null; }
+    newRound();
+  });
+
+  setActiveDiff();
+  newRound();
+})();
+</script>
+</body>
+</html>
