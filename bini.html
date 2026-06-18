@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이진수 픽셀 그림</title>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    text-align:center;
+    background:#f4f8ff;
+}
+
+.container{
+    display:flex;
+    justify-content:center;
+    gap:40px;
+    margin-top:30px;
+}
+
+.binary{
+    text-align:left;
+    font-size:24px;
+    font-weight:bold;
+}
+
+.row{
+    margin:12px 0;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns: repeat(5,60px);
+    gap:5px;
+}
+
+.cell{
+    width:60px;
+    height:60px;
+    border:1px solid #999;
+    background:white;
+    cursor:pointer;
+}
+
+.black{
+    background:black;
+}
+
+button{
+    margin-top:20px;
+    padding:10px 20px;
+    font-size:18px;
+    cursor:pointer;
+}
+
+#message{
+    margin-top:20px;
+    font-size:24px;
+    font-weight:bold;
+}
+</style>
+</head>
+<body>
+
+<h1>이진수로 픽셀 그림 완성하기</h1>
+<p>1은 검은색, 0은 흰색입니다.</p>
+
+<div class="container">
+
+<div class="binary" id="binaryHint"></div>
+
+<div class="grid" id="grid"></div>
+
+</div>
+
+<button onclick="checkAnswer()">정답 확인</button>
+<button onclick="newPuzzle()">새 문제</button>
+
+<div id="message"></div>
+
+<script>
+
+// 하트 모양 정답
+const puzzles = [
+
+[
+[0,1,0,1,0],
+[1,1,1,1,1],
+[1,1,1,1,1],
+[0,1,1,1,0],
+[0,0,1,0,0]
+],
+
+[
+[0,0,1,0,0],
+[0,1,1,1,0],
+[1,1,1,1,1],
+[0,1,1,1,0],
+[0,0,1,0,0]
+],
+
+[
+[1,0,0,0,1],
+[0,1,0,1,0],
+[0,0,1,0,0],
+[0,1,0,1,0],
+[1,0,0,0,1]
+]
+
+];
+
+let answer = [];
+let current = [];
+
+const grid = document.getElementById("grid");
+const hint = document.getElementById("binaryHint");
+
+function createGrid(){
+
+    grid.innerHTML="";
+
+    current=[];
+
+    for(let r=0;r<5;r++){
+
+        current[r]=[];
+
+        for(let c=0;c<5;c++){
+
+            current[r][c]=0;
+
+            const cell=document.createElement("div");
+            cell.className="cell";
+
+            cell.onclick=()=>{
+
+                current[r][c]= current[r][c]===0 ? 1 : 0;
+
+                cell.classList.toggle("black");
+
+            };
+
+            grid.appendChild(cell);
+        }
+    }
+}
+
+function showBinary(){
+
+    hint.innerHTML="";
+
+    answer.forEach(row=>{
+
+        const div=document.createElement("div");
+        div.className="row";
+        div.textContent=row.join(" ");
+        hint.appendChild(div);
+
+    });
+}
+
+function checkAnswer(){
+
+    let correct=true;
+
+    for(let r=0;r<5;r++){
+
+        for(let c=0;c<5;c++){
+
+            if(current[r][c]!==answer[r][c]){
+                correct=false;
+            }
+
+        }
+    }
+
+    document.getElementById("message").innerHTML=
+        correct ? "🎉 정답입니다!" : "❌ 다시 도전해보세요!";
+}
+
+function newPuzzle(){
+
+    answer=puzzles[Math.floor(Math.random()*puzzles.length)];
+
+    showBinary();
+    createGrid();
+
+    document.getElementById("message").innerHTML="";
+}
+
+newPuzzle();
+
+</script>
+
+</body>
+</html>
