@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이진수 픽셀 암호 해독기</title>
+<style>
+  :root{
+    --bg:#FFF6FB;
+    --panel-bg:#FFFFFF;
+    --panel-bg-soft:#FFEAF5;
+    --border:#F3CFE3;
+    --text:#3A1830;
+    --muted:#8C5D78;
+    --accent:#FF4FA3;
+    --accent-soft:rgba(255,79,163,0.14);
+    --green:#1E9C63;
+    --red:#E2493F;
+    --cell-off:#FBE4F0;
+    --cell-off-border:#F0BFDA;
+    --cell-on:#FF4FA3;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    padding:28px 16px;
+    display:flex;
+    justify-content:center;
+  }
+  .page{width:100%; max-width:980px;}
+
+  .topbar{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:18px;}
+  h1{font-size:24px; margin:0 0 6px; font-weight:700; display:flex; align-items:center; gap:8px; color:var(--text);}
+  h1 .spark{color:var(--accent);}
+  .subtitle{margin:0; color:var(--muted); font-size:14px;}
+
+  .nav-block{display:flex; align-items:center; gap:10px; background:var(--panel-bg); border:1px solid var(--border); border-radius:999px; padding:6px 8px;}
+  .nav-btn{background:var(--accent-soft); color:var(--accent); border:none; border-radius:999px; padding:8px 16px; font-weight:700; font-size:13px; cursor:pointer;}
+  .nav-btn:disabled{opacity:.35; cursor:not-allowed;}
+  .mission-counter{font-weight:700; font-size:14px; padding:0 6px; white-space:nowrap;}
+
+  .size-toggle-row{display:flex; align-items:center; gap:10px; margin-bottom:18px; flex-wrap:wrap;}
+  .size-toggle-label{font-size:13px; color:var(--muted);}
+  .size-pill{background:var(--panel-bg); border:1px solid var(--border); color:var(--text); border-radius:999px; padding:7px 16px; font-weight:700; font-size:13px; cursor:pointer;}
+  .size-pill.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .solved-counter{margin-left:auto; font-size:13px; color:var(--muted);}
+  .solved-counter strong{color:var(--accent);}
+
+  .panels{display:flex; gap:18px; flex-wrap:wrap; margin-bottom:18px;}
+  .panel{flex:1; min-width:300px; background:var(--panel-bg); border:1px solid var(--border); border-radius:18px; padding:18px;}
+  .panel-header{display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;}
+  .panel-title{font-weight:700; font-size:15px; flex:1;}
+  .panel-badge{font-size:11px; color:var(--muted); border:1px solid var(--border); border-radius:8px; padding:3px 8px; white-space:nowrap;}
+
+  .bit-rows{display:flex; flex-direction:column; gap:8px;}
+  .bit-row{display:flex; align-items:center; gap:10px; background:var(--panel-bg-soft); border-radius:10px; padding:8px 12px;}
+  .bit-row-label{font-size:12px; color:var(--muted); min-width:34px;}
+  .bit-row-data{font-family:Consolas,Menlo,"Liberation Mono",monospace; font-size:14px; color:#B0277D; letter-spacing:2px;}
+  .bit-rows.compact .bit-row{padding:5px 9px;}
+  .bit-rows.compact .bit-row-data{font-size:10px; letter-spacing:0.5px;}
+  .bit-rows.compact .bit-row-label{font-size:10px; min-width:24px;}
+
+  .tool-buttons{display:flex; gap:6px;}
+  .tool-btn{width:30px; height:30px; border-radius:50%; border:1px solid var(--border); background:var(--panel-bg-soft); color:var(--text); font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;}
+  .tool-btn.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+
+  .pixel-grid{display:grid; gap:4px; touch-action:none;}
+  .pixel-cell{aspect-ratio:1; border-radius:4px; border:1px solid var(--cell-off-border); background:var(--cell-off); cursor:pointer; padding:0; width:100%;}
+  .pixel-cell.on{background:var(--cell-on); border-color:var(--cell-on);}
+  .pixel-cell.flash-correct{box-shadow:0 0 0 2px var(--green);}
+  .pixel-cell.flash-wrong{box-shadow:0 0 0 2px var(--red);}
+
+  .feedback{text-align:center; font-weight:700; min-height:24px; margin:4px 0 14px; font-size:15px;}
+  .feedback.success{color:var(--green);}
+  .feedback.warn{color:var(--red);}
+
+  .action-row{display:flex; gap:12px; justify-content:center;}
+  .action-btn{padding:14px 28px; border-radius:999px; font-weight:700; font-size:14px; border:none; cursor:pointer;}
+  .action-btn.ghost{background:var(--panel-bg); border:1px solid var(--border); color:var(--text);}
+  .action-btn.primary{background:var(--accent); color:#3D0A28;}
+
+  #confettiCanvas{position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999;}
+
+  button:focus-visible{outline:3px solid var(--accent); outline-offset:2px;}
+
+  @media (max-width:680px){
+    .topbar{flex-direction:column;}
+    .nav-block{width:100%; justify-content:center;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important; animation:none !important;}
+  }
+</style>
+</head>
+<body>
+<canvas id="confettiCanvas" aria-hidden="true"></canvas>
+<div class="page">
+  <div class="topbar">
+    <div>
+      <h1><span class="spark">✦</span>이진수 픽셀 암호 해독기</h1>
+      <p class="subtitle">왼쪽 도면 숫자를 보고 오른쪽 캔버스에 똑같이 칠해보세요!</p>
+    </div>
+    <div class="nav-block">
+      <button id="prevBtn" class="nav-btn" type="button">이전</button>
+      <span class="mission-counter" id="missionCounter">미션 1 / 13</span>
+      <button id="nextBtn" class="nav-btn" type="button">다음</button>
+    </div>
+  </div>
+
+  <div class="size-toggle-row">
+    <span class="size-toggle-label">격자 크기</span>
+    <button id="size5Btn" class="size-pill" type="button">5 × 5</button>
+    <button id="size8Btn" class="size-pill active" type="button">8 × 8</button>
+    <button id="size16Btn" class="size-pill" type="button">16 × 16</button>
+    <span class="solved-counter">완료 <strong id="solvedCount">0</strong> / 13</span>
+  </div>
+
+  <div class="panels">
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">암호 도면 데이터</span>
+        <span class="panel-badge" id="bitmapBadge">8 X 8 BITMAP</span>
+      </div>
+      <div id="bitRows" class="bit-rows" role="img"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">픽셀 미션 격자 캔버스</span>
+        <div class="tool-buttons">
+          <button id="eraseTool" class="tool-btn" type="button" aria-label="지우개">✕</button>
+          <button id="paintTool" class="tool-btn active" type="button" aria-label="칠하기">1</button>
+        </div>
+        <span class="panel-badge" id="gridBadge">8 X 8 GRID</span>
+      </div>
+      <div id="pixelGrid" class="pixel-grid" role="group" aria-label="픽셀 캔버스"></div>
+    </section>
+  </div>
+
+  <p id="feedback" class="feedback" aria-live="polite"></p>
+
+  <div class="action-row">
+    <button id="clearBtn" class="action-btn ghost" type="button">전체 지우기</button>
+    <button id="checkBtn" class="action-btn primary" type="button">채점하기</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var MISSIONS = [
+    { name:'하트', five:["01010","11111","11111","01110","00100"], base:["01100110","11111111","11111111","11111111","01111110","00111100","00011000","00000000"] },
+    { name:'별', five:["00100","01110","11111","01110","00100"], base:["00011000","00011000","00111100","01111110","11111111","01111110","00111100","00011000"] },
+    { name:'스마일', five:["01110","11111","10101","10001","01110"], base:["00111100","01000010","10100101","10000001","10100101","10011001","01000010","00111100"] },
+    { name:'화살표', five:["00100","01110","11111","00100","00100"], base:["00011000","00111100","01111110","11111111","00011000","00011000","00011000","00011000"] },
+    { name:'집', five:["00100","01110","11111","11111","11111"], base:["00011000","00111100","01111110","11111111","11100111","11100111","11100111","11111111"] },
+    { name:'나무', five:["01110","11111","11111","00100","01110"], base:["00011000","00111100","01111110","00111100","01111110","00011000","00011000","00111100"] },
+    { name:'닻', five:["00100","11111","00100","00100","01110"], base:["00011000","00011000","01111110","00011000","10011001","10011001","01111110","00011000"] },
+    { name:'우산', five:["11111","11111","00100","00100","00100"], base:["00011000","00111100","01111110","11111111","00011000","00011000","10011001","01111110"] },
+    { name:'음표', five:["00011","00100","00100","00100","01110"], base:["00001100","00001100","00001100","00011100","00111100","01111100","01100000","00000000"] },
+    { name:'번개', five:["00110","00100","01110","00100","01100"], base:["00001110","00011100","00111000","01111110","00001110","00011100","00111000","00000000"] },
+    { name:'물고기', five:["00000","01110","11111","01110","00011"], base:["00000000","00111000","01111110","11111111","01111111","00111110","00000010","00000000"] },
+    { name:'꽃', five:["01010","11011","00100","11011","01010"], base:["00100100","01011010","00111100","11111111","11111111","00111100","00011000","00111100"] },
+    { name:'풍선', five:["01110","11111","01110","00100","00100"], base:["00111100","01111110","11111111","11111111","01111110","00011000","00011000","00100100"] }
+  ];
+
+  var gridSize = 8;
+  var missionIdx = 0;
+  var target = [];
+  var player = [];
+  var currentTool = 'paint';
+  var isPainting = false;
+  var solvedCount = 0;
+  var autoNextTimer = null;
+
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var missionCounterEl = document.getElementById('missionCounter');
+  var size5Btn = document.getElementById('size5Btn');
+  var size8Btn = document.getElementById('size8Btn');
+  var size16Btn = document.getElementById('size16Btn');
+  var solvedCountEl = document.getElementById('solvedCount');
+  var bitmapBadge = document.getElementById('bitmapBadge');
+  var gridBadge = document.getElementById('gridBadge');
+  var bitRowsEl = document.getElementById('bitRows');
+  var pixelGridEl = document.getElementById('pixelGrid');
+  var eraseTool = document.getElementById('eraseTool');
+  var paintTool = document.getElementById('paintTool');
+  var feedbackEl = document.getElementById('feedback');
+  var clearBtn = document.getElementById('clearBtn');
+  var checkBtn = document.getElementById('checkBtn');
+
+  var confettiCanvas = document.getElementById('confettiCanvas');
+  var confettiCtx = confettiCanvas.getContext('2d');
+  var confettiParticles = [];
+  var confettiAnimating = false;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var confettiColors = ['#FF4FA3', '#FF8FC8', '#D6379B', '#FFC1E0', '#FF6FB0', '#FFE3F0'];
+
+  function resizeConfettiCanvas(){
+    confettiCanvas.width = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeConfettiCanvas);
+  resizeConfettiCanvas();
+
+  function burstConfetti(){
+    if(reduceMotion){ return; }
+    for(var i = 0; i < 140; i++){
+      confettiParticles.push({
+        x: confettiCanvas.width / 2 + (Math.random() - 0.5) * 240,
+        y: confettiCanvas.height * 0.35 + (Math.random() - 0.5) * 80,
+        vx: (Math.random() - 0.5) * 9,
+        vy: (Math.random() * -10) - 3,
+        size: Math.random() * 6 + 4,
+        color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+        rotation: Math.random() * 360,
+        rotationSpeed: (Math.random() - 0.5) * 12,
+        life: 1
+      });
+    }
+    if(!confettiAnimating){
+      confettiAnimating = true;
+      requestAnimationFrame(animateConfetti);
+    }
+  }
+
+  function animateConfetti(){
+    confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    var stillAlive = false;
+    for(var i = confettiParticles.length - 1; i >= 0; i--){
+      var p = confettiParticles[i];
+      p.vy += 0.25;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rotation += p.rotationSpeed;
+      p.life -= 0.012;
+      if(p.life <= 0 || p.y > confettiCanvas.height + 50){
+        confettiParticles.splice(i, 1);
+        continue;
+      }
+      stillAlive = true;
+      confettiCtx.save();
+      confettiCtx.globalAlpha = Math.max(p.life, 0);
+      confettiCtx.translate(p.x, p.y);
+      confettiCtx.rotate(p.rotation * Math.PI / 180);
+      confettiCtx.fillStyle = p.color;
+      confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+      confettiCtx.restore();
+    }
+    if(stillAlive){
+      requestAnimationFrame(animateConfetti);
+    } else {
+      confettiAnimating = false;
+      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
+  }
+
+  function buildBase(idx){
+    return MISSIONS[idx].base.map(function(row){
+      return row.split('').map(Number);
+    });
+  }
+
+  function buildTarget(){
+    if(gridSize === 5){
+      target = MISSIONS[missionIdx].five.map(function(row){
+        return row.split('').map(Number);
+      });
+      return;
+    }
+    var base = buildBase(missionIdx);
+    if(gridSize === 8){
+      target = base;
+      return;
+    }
+    var factor = gridSize / 8;
+    var out = [];
+    for(var r = 0; r < gridSize; r++){
+      var row = [];
+      for(var c = 0; c < gridSize; c++){
+        row.push(base[Math.floor(r / factor)][Math.floor(c / factor)]);
+      }
+      out.push(row);
+    }
+    target = out;
+  }
+
+  function resetPlayer(){
+    player = [];
+    for(var r = 0; r < gridSize; r++){
+      player.push(new Array(gridSize).fill(0));
+    }
+  }
+
+  function renderBitRows(){
+    bitRowsEl.innerHTML = '';
+    bitRowsEl.classList.toggle('compact', gridSize === 16);
+    bitRowsEl.setAttribute('aria-label', '암호 도면 ' + gridSize + ' x ' + gridSize + ' 비트맵');
+    for(var r = 0; r < gridSize; r++){
+      var rowEl = document.createElement('div');
+      rowEl.className = 'bit-row';
+      var label = document.createElement('span');
+      label.className = 'bit-row-label';
+      label.textContent = (r + 1) + '줄';
+      var data = document.createElement('span');
+      data.className = 'bit-row-data';
+      data.textContent = target[r].join(' ');
+      rowEl.appendChild(label);
+      rowEl.appendChild(data);
+      bitRowsEl.appendChild(rowEl);
+    }
+  }
+
+  function applyToolToCell(cell){
+    var r = parseInt(cell.dataset.r, 10);
+    var c = parseInt(cell.dataset.c, 10);
+    var newVal = currentTool === 'paint' ? 1 : 0;
+    if(player[r][c] === newVal){ return; }
+    player[r][c] = newVal;
+    cell.classList.toggle('on', newVal === 1);
+    cell.classList.toggle('off', newVal === 0);
+    cell.setAttribute('aria-pressed', newVal === 1 ? 'true' : 'false');
+  }
+
+  function renderGrid(){
+    pixelGridEl.innerHTML = '';
+    pixelGridEl.style.gridTemplateColumns = 'repeat(' + gridSize + ',1fr)';
+    for(var r = 0; r < gridSize; r++){
+      for(var c = 0; c < gridSize; c++){
+        var cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'pixel-cell ' + (player[r][c] === 1 ? 'on' : 'off');
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+        cell.setAttribute('aria-pressed', player[r][c] === 1 ? 'true' : 'false');
+        cell.setAttribute('aria-label', (r + 1) + '행 ' + (c + 1) + '열');
+        pixelGridEl.appendChild(cell);
+      }
+    }
+  }
+
+  pixelGridEl.addEventListener('pointerdown', function(e){
+    var cell = e.target.closest('.pixel-cell');
+    if(!cell){ return; }
+    isPainting = true;
+    applyToolToCell(cell);
+    feedbackEl.textContent = '';
+    feedbackEl.className = 'feedback';
+  });
+  pixelGridEl.addEventListener('pointerover', function(e){
+    if(!isPainting){ return; }
+    var cell = e.target.closest('.pixel-cell');
+    if(!cell){ return; }
+    applyToolToCell(cell);
+  });
+  document.addEventListener('pointerup', function(){ isPainting = false; });
+  document.addEventListener('pointercancel', function(){ isPainting = false; });
+
+  function updateBadges(){
+    bitmapBadge.textContent = gridSize + ' X ' + gridSize + ' BITMAP';
+    gridBadge.textContent = gridSize + ' X ' + gridSize + ' GRID';
+  }
+
+  function updateMissionCounter(){
+    missionCounterEl.textContent = '미션 ' + (missionIdx + 1) + ' / ' + MISSIONS.length;
+    prevBtn.disabled = missionIdx === 0;
+    nextBtn.disabled = missionIdx === MISSIONS.length - 1;
+  }
+
+  function loadMission(){
+    if(autoNextTimer){ clearTimeout(autoNextTimer); autoNextTimer = null; }
+    buildTarget();
+    resetPlayer();
+    renderBitRows();
+    renderGrid();
+    updateBadges();
+    updateMissionCounter();
+    feedbackEl.textContent = '';
+    feedbackEl.className = 'feedback';
+  }
+
+  function setTool(tool){
+    currentTool = tool;
+    paintTool.classList.toggle('active', tool === 'paint');
+    eraseTool.classList.toggle('active', tool === 'erase');
+  }
+
+  function checkAnswer(){
+    if(autoNextTimer){ clearTimeout(autoNextTimer); autoNextTimer = null; }
+    var match = true;
+    var cells = pixelGridEl.querySelectorAll('.pixel-cell');
+    cells.forEach(function(cell){
+      var r = parseInt(cell.dataset.r, 10);
+      var c = parseInt(cell.dataset.c, 10);
+      cell.classList.remove('flash-correct', 'flash-wrong');
+      if(player[r][c] === target[r][c]){
+        cell.classList.add('flash-correct');
+      } else {
+        cell.classList.add('flash-wrong');
+        match = false;
+      }
+    });
+    setTimeout(function(){
+      cells.forEach(function(cell){ cell.classList.remove('flash-correct', 'flash-wrong'); });
+    }, 900);
+
+    if(match){
+      solvedCount++; solvedCountEl.textContent = solvedCount;
+      feedbackEl.textContent = '정답이에요! 이건 ' + MISSIONS[missionIdx].name + '이에요.';
+      feedbackEl.className = 'feedback success';
+      burstConfetti();
+      if(missionIdx < MISSIONS.length - 1){
+        autoNextTimer = setTimeout(function(){ missionIdx++; loadMission(); }, 1400);
+      }
+    } else {
+      feedbackEl.textContent = '아직 같지 않아요. 빨간 칸을 다시 확인해보세요.';
+      feedbackEl.className = 'feedback warn';
+    }
+  }
+
+  prevBtn.addEventListener('click', function(){
+    if(missionIdx > 0){ missionIdx--; loadMission(); }
+  });
+  nextBtn.addEventListener('click', function(){
+    if(missionIdx < MISSIONS.length - 1){ missionIdx++; loadMission(); }
+  });
+
+  function setGridSize(size, activeBtn){
+    if(gridSize === size){ return; }
+    gridSize = size;
+    solvedCount = 0; solvedCountEl.textContent = 0;
+    [size5Btn, size8Btn, size16Btn].forEach(function(btn){
+      btn.classList.toggle('active', btn === activeBtn);
+    });
+    loadMission();
+  }
+
+  size5Btn.addEventListener('click', function(){ setGridSize(5, size5Btn); });
+  size8Btn.addEventListener('click', function(){ setGridSize(8, size8Btn); });
+  size16Btn.addEventListener('click', function(){ setGridSize(16, size16Btn); });
+
+  eraseTool.addEventListener('click', function(){ setTool('erase'); });
+  paintTool.addEventListener('click', function(){ setTool('paint'); });
+
+  clearBtn.addEventListener('click', function(){
+    resetPlayer();
+    renderGrid();
+    feedbackEl.textContent = '';
+    feedbackEl.className = 'feedback';
+  });
+  checkBtn.addEventListener('click', checkAnswer);
+
+  setTool('paint');
+  loadMission();
+})();
+</script>
+</body>
+</html>
