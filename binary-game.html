@@ -82,10 +82,10 @@
   .divider{width:2px; background:var(--off-color); align-self:stretch; border-radius:2px;}
   @media (max-width:520px){.divider{display:none;}}
 
-  .col-title{font-family:'Baloo 2',sans-serif; font-size:18px; margin:0 0 12px; text-align:center;}
+  .col-title-row{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:0 0 12px;}
+  .col-title{font-family:'Baloo 2',sans-serif; font-size:18px;}
+  .col-decimal{font-family:'Baloo 2',sans-serif; font-size:26px; font-weight:700; color:var(--accent-dark);}
   .bits-grid{display:grid; gap:10px;}
-  .col-value{text-align:center; color:var(--muted); font-size:14px; margin:14px 0 0;}
-  .col-value strong{color:var(--ink); font-size:16px;}
 
   .place-label{font-size:12px; color:var(--muted); text-align:center;}
 
@@ -134,9 +134,20 @@
   @media (prefers-reduced-motion: reduce){
     *{transition:none !important; animation:none !important;}
   }
+
+  #confettiCanvas{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+    z-index:9999;
+  }
 </style>
 </head>
 <body>
+<canvas id="confettiCanvas" aria-hidden="true"></canvas>
 <div class="wrap">
   <h1>이진수 만들기 게임</h1>
   <p class="sub">오른쪽 목표와 똑같이 왼쪽 전구를 눌러보세요!</p>
@@ -160,15 +171,19 @@
 
     <div class="game-grids">
       <div class="column">
-        <p class="col-title">목표</p>
+        <div class="col-title-row">
+          <span class="col-title">목표</span>
+          <span class="col-decimal" id="targetVal" aria-label="10진수">0</span>
+        </div>
         <div id="targetGrid" class="bits-grid" role="img"></div>
-        <p class="col-value">10진수: <strong id="targetVal">0</strong></p>
       </div>
       <div class="divider" aria-hidden="true"></div>
       <div class="column">
-        <p class="col-title">내가 만들기</p>
+        <div class="col-title-row">
+          <span class="col-title">내가 만들기</span>
+          <span class="col-decimal" id="playerVal" aria-label="10진수">0</span>
+        </div>
         <div id="playerGrid" class="bits-grid" role="group" aria-label="내가 만든 이진수"></div>
-        <p class="col-value">10진수: <strong id="playerVal">0</strong></p>
       </div>
     </div>
 
@@ -203,6 +218,72 @@
   var checkBtn = document.getElementById('checkBtn');
   var clearBtn = document.getElementById('clearBtn');
   var nextBtn = document.getElementById('nextBtn');
+
+  var confettiCanvas = document.getElementById('confettiCanvas');
+  var confettiCtx = confettiCanvas.getContext('2d');
+  var confettiParticles = [];
+  var confettiAnimating = false;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var confettiColors = ['#FFC857', '#6C5CE7', '#3FAE7B', '#FF6F59', '#4FB7E8', '#FF8FB1'];
+
+  function resizeConfettiCanvas(){
+    confettiCanvas.width = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeConfettiCanvas);
+  resizeConfettiCanvas();
+
+  function burstConfetti(){
+    if(reduceMotion){ return; }
+    for(var i = 0; i < 140; i++){
+      confettiParticles.push({
+        x: confettiCanvas.width / 2 + (Math.random() - 0.5) * 240,
+        y: confettiCanvas.height * 0.35 + (Math.random() - 0.5) * 80,
+        vx: (Math.random() - 0.5) * 9,
+        vy: (Math.random() * -10) - 3,
+        size: Math.random() * 6 + 4,
+        color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+        rotation: Math.random() * 360,
+        rotationSpeed: (Math.random() - 0.5) * 12,
+        life: 1
+      });
+    }
+    if(!confettiAnimating){
+      confettiAnimating = true;
+      requestAnimationFrame(animateConfetti);
+    }
+  }
+
+  function animateConfetti(){
+    confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    var stillAlive = false;
+    for(var i = confettiParticles.length - 1; i >= 0; i--){
+      var p = confettiParticles[i];
+      p.vy += 0.25;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rotation += p.rotationSpeed;
+      p.life -= 0.012;
+      if(p.life <= 0 || p.y > confettiCanvas.height + 50){
+        confettiParticles.splice(i, 1);
+        continue;
+      }
+      stillAlive = true;
+      confettiCtx.save();
+      confettiCtx.globalAlpha = Math.max(p.life, 0);
+      confettiCtx.translate(p.x, p.y);
+      confettiCtx.rotate(p.rotation * Math.PI / 180);
+      confettiCtx.fillStyle = p.color;
+      confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+      confettiCtx.restore();
+    }
+    if(stillAlive){
+      requestAnimationFrame(animateConfetti);
+    } else {
+      confettiAnimating = false;
+      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
+  }
 
   function placeValue(idx){ return Math.pow(2, bits - 1 - idx); }
 
@@ -320,6 +401,7 @@
       score++; scoreEl.textContent = score;
       feedback.textContent = '정답이에요! 잘했어요.';
       feedback.className = 'feedback success';
+      burstConfetti();
       autoNextTimer = setTimeout(newRound, 1100);
     } else {
       feedback.textContent = '아직 같지 않아요. 빨간 전구를 다시 확인해보세요.';
