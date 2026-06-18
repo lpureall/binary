@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>전체화면 이진수 픽셀 놀이터</title>
+<style>
+*{box-sizing:border-box}
+body{
+margin:0;
+font-family:Arial,sans-serif;
+background:#EAF8FF;
+height:100vh;
+display:flex;
+flex-direction:column;
+}
+header{
+text-align:center;
+padding:15px;
+}
+h1{margin:0;color:#ff5aa5;font-size:clamp(2rem,4vw,3rem);}
+#info{font-size:1.3rem;font-weight:bold}
+.main{
+flex:1;
+display:flex;
+justify-content:space-evenly;
+align-items:center;
+padding:20px;
+gap:30px;
+}
+#hints{
+background:white;
+border:4px solid #A8DFFF;
+border-radius:20px;
+padding:20px;
+font-size:clamp(1rem,2vw,1.5rem);
+min-width:250px;
+}
+#grid{
+display:grid;
+gap:4px;
+padding:10px;
+background:#A8DFFF;
+border-radius:20px;
+}
+.cell{
+background:white;
+cursor:pointer;
+aspect-ratio:1/1;
+}
+.fill{background:#FF5AA5;}
+.controls{text-align:center;padding:15px;}
+button{
+font-size:1.2rem;
+padding:12px 24px;
+margin:5px;
+border:none;
+border-radius:12px;
+background:#FF8FC7;
+cursor:pointer;
+}
+#msg{font-size:1.6rem;font-weight:bold;color:#ff4d94;}
+@media(max-width:900px){
+.main{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+<header>
+<h1>💗 이진수 픽셀 놀이터 💙</h1>
+<div id="info">레벨 1 | 점수 0</div>
+<div id="msg"></div>
+</header>
+
+<div class="main">
+<div id="hints"></div>
+<div id="grid"></div>
+</div>
+
+<div class="controls">
+<button onclick="check()">정답 확인</button>
+<button onclick="nextLevel()">다음 문제</button>
+</div>
+
+<script>
+const puzzles=[
+{size:5,name:"하트",data:[[0,1,0,1,0],[1,1,1,1,1],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]]},
+{size:6,name:"토끼",data:[[1,0,0,0,0,1],[1,1,0,0,1,1],[1,1,1,1,1,1],[1,0,1,1,0,1],[0,1,1,1,1,0],[0,0,1,1,0,0]]},
+{size:8,name:"고양이",data:[[1,0,0,0,0,0,0,1],[1,1,0,0,0,0,1,1],[1,1,1,1,1,1,1,1],[1,0,1,0,0,1,0,1],[1,1,1,1,1,1,1,1],[0,1,0,1,1,0,1,0],[0,1,1,1,1,1,1,0],[0,0,1,0,0,1,0,0]]}
+];
+let level=0,score=0,current=[];
+
+function loadPuzzle(){
+const p=puzzles[Math.min(level,puzzles.length-1)];
+document.getElementById("info").innerText=`레벨 ${level+1} | 점수 ${score}`;
+
+const hints=document.getElementById("hints");
+hints.innerHTML=`<h2>${p.name}</h2>`;
+p.data.forEach(r=>{
+ const d=document.createElement("div");
+ d.textContent=r.join(" ");
+ hints.appendChild(d);
+});
+
+const grid=document.getElementById("grid");
+grid.innerHTML="";
+const size=Math.min(window.innerHeight*0.65/p.size,70);
+grid.style.gridTemplateColumns=`repeat(${p.size}, ${size}px)`;
+
+current=[];
+for(let r=0;r<p.size;r++){
+ current[r]=[];
+ for(let c=0;c<p.size;c++){
+  current[r][c]=0;
+  const cell=document.createElement("div");
+  cell.className="cell";
+  cell.style.width=size+"px";
+  cell.onclick=()=>{
+   current[r][c]=current[r][c]?0:1;
+   cell.classList.toggle("fill");
+  };
+  grid.appendChild(cell);
+ }
+}
+}
+
+function check(){
+const p=puzzles[Math.min(level,puzzles.length-1)];
+let ok=true;
+for(let r=0;r<p.size;r++){
+ for(let c=0;c<p.size;c++){
+  if(current[r][c]!==p.data[r][c]) ok=false;
+ }
+}
+if(ok){
+ score+=100;
+ document.getElementById("msg").textContent=`✨ 정답! ${p.name} 완성! ✨`;
+ document.getElementById("info").innerText=`레벨 ${level+1} | 점수 ${score}`;
+}else{
+ document.getElementById("msg").textContent="다시 도전!";
+}
+}
+function nextLevel(){
+level=Math.min(level+1,puzzles.length-1);
+document.getElementById("msg").textContent="";
+loadPuzzle();
+}
+window.onresize=loadPuzzle;
+loadPuzzle();
+</script>
+</body>
+</html>
